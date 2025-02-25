@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件下载</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+
+        .file-item:hover {
+            background-color: #f8f8f8;
+        }
+
+        .file-info {
+            flex-grow: 1;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .download-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+
+        .batch-actions {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .select-all-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .nav-links a {
+            color: #4CAF50;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="/">返回上传页面</a>
+        </div>
+        <h1>文件下载</h1>
+        <div class="batch-actions">
+            <div class="select-all-container">
+                <input type="checkbox" id="selectAll" class="checkbox">
+                <label for="selectAll">全选</label>
+            </div>
+            <button class="download-btn" style="background-color: #f44336;" onclick="batchDelete()">批量删除</button>
+        </div>
+        <ul class="file-list" id="fileList">
+            <!-- 文件列表将通过 JavaScript 动态加载 -->
+        </ul>
+    </div>
+
+    <script>
+        // 获取API前缀
+        let apiPrefix = '';
+        
+        // 从后端获取API前缀
+        async function fetchApiPrefix() {
+            try {
+                const response = await fetch('/api/prefix');
+                const data = await response.json();
+                apiPrefix = data.prefix;
+            } catch (error) {
+                console.error('获取API前缀失败:', error);
+            }
+        }
+        
+        // 页面加载时获取API前缀
+        fetchApiPrefix();
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function loadFiles() {
+            try {
+                const response = await fetch(`${apiPrefix}/files`);
+                const data = await response.json();
+                const fileList = document.getElementById('fileList');
+                
+                if (data.files.length === 0) {
+                    fileList.innerHTML = '<div class="empty-message">暂无上传文件</div>';
+                    return;
+                }
+
+                fileList.innerHTML = data.files.map(file => `
+                    <li class="file-item">
+                        <div class="checkbox-container">
+                            <input type="checkbox" class="checkbox file-checkbox" data-filename="${file.name}">
+                        </div>
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">${formatFileSize(file.size)}</div>
+                        </div>
+                        <div>
+                            <button class="download-btn" onclick="downloadFile('${file.name}')">下载</button>
+                            <button class="download-btn" style="margin-left: 10px; background-color: #f44336;" onclick="deleteFile('${file.name}')">删除</button>
+                        </div>
+                    </li>
+                `).join('');
+                
+                updateSelectAllCheckbox();
+
+            } catch (error) {
+                console.error('加载文件列表失败:', error);
+            }
+        }
+
+        async function deleteFile(filename) {
+            if (confirm(`确定要删除文件 ${filename} 吗？`)) {
+                try {
+                    const response = await fetch(`${apiPrefix}/files/${encodeURIComponent(filename)}`, {
+                        method: 'DELETE'
+                    });
+                    if (response.ok) {
+                        alert('文件删除成功！');
+                        loadFiles(); // 刷新文件列表
+                    } else {
+                        const data = await response.json();
+                        alert(`删除失败：${data.detail || '未知错误'}`);
+                    }
+                } catch (error) {
+                    alert('删除文件时发生错误：' + error.message);
+                }
+            }
+        }
+
+        function downloadFile(filename) {
+            window.location.href = `${apiPrefix}/download/${encodeURIComponent(filename)}`;
+        }
+
+        async function batchDelete() {
+            const selectedFiles = Array.from(document.querySelectorAll('.file-checkbox:checked')).map(checkbox => 
+                checkbox.getAttribute('data-filename')
+            );
+
+            if (selectedFiles.length === 0) {
+                alert('请至少选择一个文件！');
+                return;
+            }
+
+            if (confirm(`确定要删除选中的 ${selectedFiles.length} 个文件吗？`)) {
+                let successCount = 0;
+                let failCount = 0;
+
+                for (const filename of selectedFiles) {
+                    try {
+                        const response = await fetch(`${apiPrefix}/files/${encodeURIComponent(filename)}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                            successCount++;
+                        } else {
+                            failCount++;
+                        }
+                    } catch (error) {
+                        failCount++;
+                        console.error(`删除文件 ${filename} 时发生错误:`, error);
+                    }
+                }
+
+                alert(`删除完成！\n成功：${successCount} 个\n失败：${failCount} 个`);
+                loadFiles(); // 刷新文件列表
+            }
+        }
+
+        function updateSelectAllCheckbox() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const fileCheckboxes = document.querySelectorAll('.file-checkbox');
+            const checkedBoxes = document.querySelectorAll('.file-checkbox:checked');
+            selectAllCheckbox.checked = fileCheckboxes.length > 0 && checkedBoxes.length === fileCheckboxes.length;
+            selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < fileCheckboxes.length;
+        }
+
+        // 页面加载时初始化事件监听器和获取文件列表
+        window.addEventListener('load', () => {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const fileList = document.getElementById('fileList');
+
+            // 处理全选功能
+            selectAllCheckbox.addEventListener('click', function() {
+                const fileCheckboxes = document.querySelectorAll('.file-checkbox');
+                const newState = !this.checked;
+                fileCheckboxes.forEach(checkbox => {
+                    checkbox.checked = newState;
+                });
+                this.checked = newState;
+                this.indeterminate = false;
+                updateSelectAllCheckbox();
+            });
+
+            // 使用事件委托处理文件复选框的变化
+            fileList.addEventListener('change', (e) => {
+                if (e.target.classList.contains('file-checkbox')) {
+                    updateSelectAllCheckbox();
+                }
+            });
+
+            // 加载文件列表
+            loadFiles();
+        });
+    </script>
+</body>
+</html>
