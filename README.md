@@ -6,8 +6,19 @@
 
 ## 部署说明
 
-### 启动方式
+### 环境要求
 
+- Python 3.x
+- 所需Python包（见requirements.txt）
+
+### 快速启动
+
+1. 双击运行`start.bat`脚本，系统会自动：
+   - 检查Python环境
+   - 验证必要文件存在
+   - 启动服务器
+
+2. 或者直接使用命令行启动：
 ```bash
 python server.py
 ```
@@ -25,11 +36,11 @@ if __name__ == "__main__":
 
 ```
 # API路径前缀配置
-API_PREFIX = "/fup"
+API_PREFIX = "/dky"
 ```
 访问地址为
 ```
-http://0.0.0.0:8888/fup/
+http://0.0.0.0:8888/dky/
 ```
 
 ## 离线部署
@@ -48,4 +59,13 @@ pip install --no-index --find-links=packages -r requirements.txt
 fastapi==0.115.8
 uvicorn==0.34.0
 ```
+
+## 目录结构
+
+- `server.py`: 主服务器程序
+- `start.bat`: 启动脚本
+- `index.html`: 上传页面
+- `download.html`: 下载页面
+- `uploads/`: 上传文件存储目录
+- `temp/`: 临时文件目录（用于分片上传）
 
