@@ -21,7 +21,9 @@ python server.py
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8888)
+```
 
+```
 # API路径前缀配置
 API_PREFIX = "/fup"
 ```
