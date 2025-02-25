@@ -10,7 +10,7 @@ import hashlib
 app = FastAPI()
 
 # 配置API路径前缀
-API_PREFIX = "/fup"
+API_PREFIX = "/dky"
 
 # 配置CORS
 app.add_middleware(
@@ -148,4 +148,5 @@ async def delete_file(filename: str):
 
 if __name__ == "__main__":
     import uvicorn
+    print(f"服务将启动在 http://127.0.0.1:8888{API_PREFIX}")
     uvicorn.run(app, host="0.0.0.0", port=8888)
